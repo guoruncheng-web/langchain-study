@@ -7,20 +7,12 @@ const COOKIE_NAME = "auth-token";
 // 需要认证的路由前缀
 const PROTECTED_ROUTES = ["/chat", "/api/chat", "/api/kb", "/kb"];
 
-// 已登录用户应跳转的路由
-const AUTH_ROUTES = ["/login", "/register"];
-
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
   // 检查是否是受保护的路由
   const isProtectedRoute = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
-  );
-
-  // 检查是否是认证页面（登录/注册）
-  const isAuthRoute = AUTH_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
@@ -38,23 +30,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 已登录访问登录/注册页，重定向到聊天页
-  if (isAuthRoute && token) {
-    const chatUrl = new URL("/chat", request.url);
-    return NextResponse.redirect(chatUrl);
-  }
-
   return NextResponse.next();
 }
 
-// 配置 middleware 匹配的路由
+// 配置 proxy 匹配的路由（仅保护需要认证的路由）
 export const config = {
   matcher: [
     "/chat/:path*",
     "/api/chat/:path*",
     "/api/kb/:path*",
     "/kb/:path*",
-    "/login",
-    "/register",
   ],
 };
