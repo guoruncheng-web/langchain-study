@@ -113,9 +113,7 @@ export async function POST(req: Request) {
     )?.content;
     if (userQuery) {
       const vectorStore = await getVectorStore();
-      const results = await vectorStore.similaritySearch(userQuery, 3, {
-        userId: payload.userId,
-      });
+      const results = await vectorStore.similaritySearch(userQuery, 3);
       if (results.length > 0) {
         ragContext = results.map((doc) => doc.pageContent).join("\n---\n");
       }
