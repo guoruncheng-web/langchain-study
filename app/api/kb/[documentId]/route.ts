@@ -11,6 +11,11 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: "未登录" }, { status: 401 });
   }
 
+  // 仅管理员可删除知识库文档
+  if (payload.role !== 'admin') {
+    return NextResponse.json({ success: false, error: "无权访问" }, { status: 403 });
+  }
+
   const { documentId } = await params;
   const sql = getSQL();
 

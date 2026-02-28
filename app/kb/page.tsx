@@ -68,6 +68,13 @@ export default function KnowledgeBase() {
     }
   }, [user, loading, router]);
 
+  // 非管理员重定向到聊天页面
+  useEffect(() => {
+    if (!loading && user && user.role !== 'admin') {
+      router.push("/chat");
+    }
+  }, [user, loading, router]);
+
   // 加载文档列表
   const loadDocuments = useCallback(async () => {
     try {

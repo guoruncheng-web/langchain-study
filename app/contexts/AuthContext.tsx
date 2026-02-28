@@ -7,6 +7,7 @@ interface User {
   id: string;
   username: string;
   email: string;
+  role: string;
 }
 
 // 认证上下文类型

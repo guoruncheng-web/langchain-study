@@ -53,6 +53,9 @@ export async function initTables() {
     )
   `;
 
+  // 迁移：为用户表添加角色列
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(20) DEFAULT 'user'`;
+
   // 创建索引加速查询
   await sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON chat_sessions(user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id)`;

@@ -70,18 +70,18 @@ export async function POST(req: Request) {
   // 创建用户
   const userId = uuidv4();
   await sql`
-    INSERT INTO users (id, username, email, password_hash)
-    VALUES (${userId}, ${lowerUsername}, ${lowerEmail}, ${passwordHash})
+    INSERT INTO users (id, username, email, password_hash, role)
+    VALUES (${userId}, ${lowerUsername}, ${lowerEmail}, ${passwordHash}, ${'user'})
   `;
 
-  // 签发 JWT Token
-  const token = signToken({ userId, username: lowerUsername });
+  // 签发 JWT Token（包含角色信息）
+  const token = signToken({ userId, username: lowerUsername, role: 'user' });
   const cookieOptions = createAuthCookieOptions(token);
 
   const response = NextResponse.json(
     {
       success: true,
-      user: { id: userId, username: lowerUsername, email: lowerEmail },
+      user: { id: userId, username: lowerUsername, email: lowerEmail, role: 'user' },
     },
     { status: 201 }
   );

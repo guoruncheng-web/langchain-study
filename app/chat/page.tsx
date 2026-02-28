@@ -254,12 +254,15 @@ export default function Chat() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/kb"
-              className="rounded-lg px-3 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-blue-400"
-            >
-              知识库
-            </Link>
+            {/* 仅管理员显示知识库入口 */}
+            {user.role === 'admin' && (
+              <Link
+                href="/kb"
+                className="rounded-lg px-3 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-blue-400"
+              >
+                知识库
+              </Link>
+            )}
             <span className="text-sm text-gray-600 dark:text-gray-400">
               {user.username}
             </span>

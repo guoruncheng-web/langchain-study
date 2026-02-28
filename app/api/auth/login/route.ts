@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
   // 根据用户名或邮箱查找用户
   const rows = await sql`
-    SELECT id, username, email, password_hash
+    SELECT id, username, email, password_hash, role
     FROM users
     WHERE username = ${lowerId} OR email = ${lowerId}
     LIMIT 1
@@ -44,13 +44,13 @@ export async function POST(req: Request) {
     );
   }
 
-  // 签发 JWT Token
-  const token = signToken({ userId: user.id, username: user.username });
+  // 签发 JWT Token（包含角色信息）
+  const token = signToken({ userId: user.id, username: user.username, role: user.role || 'user' });
   const cookieOptions = createAuthCookieOptions(token);
 
   const response = NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, email: user.email },
+    user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user' },
   });
 
   response.cookies.set(cookieOptions);

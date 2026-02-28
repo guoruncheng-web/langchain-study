@@ -15,7 +15,7 @@ export async function GET() {
 
   const sql = getSQL();
   const rows = await sql`
-    SELECT id, username, email FROM users WHERE id = ${payload.userId}
+    SELECT id, username, email, role FROM users WHERE id = ${payload.userId}
   `;
 
   if (rows.length === 0) {
@@ -28,6 +28,6 @@ export async function GET() {
   const user = rows[0];
   return NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, email: user.email },
+    user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user' },
   });
 }

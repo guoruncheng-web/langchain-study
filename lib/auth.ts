@@ -11,6 +11,7 @@ const TOKEN_MAX_AGE = 7 * 24 * 60 * 60;
 export interface JwtPayload {
   userId: string;
   username: string;
+  role: string;
 }
 
 /**

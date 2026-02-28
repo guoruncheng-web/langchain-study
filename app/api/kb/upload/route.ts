@@ -14,6 +14,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, error: "未登录" }, { status: 401 });
   }
 
+  // 仅管理员可上传知识库文档
+  if (payload.role !== 'admin') {
+    return NextResponse.json({ success: false, error: "无权访问" }, { status: 403 });
+  }
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 

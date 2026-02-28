@@ -5,15 +5,18 @@ import type { NextRequest } from "next/server";
 const COOKIE_NAME = "auth-token";
 
 // 需要认证的路由前缀
-const PROTECTED_ROUTES = ["/chat", "/api/chat", "/api/kb", "/kb"];
+const PROTECTED_ROUTES = ["/", "/chat", "/api/chat", "/api/kb", "/kb"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(COOKIE_NAME)?.value;
 
-  // 检查是否是受保护的路由
+  // 检查是否是受保护的路由（/ 仅精确匹配，其他前缀匹配）
   const isProtectedRoute = PROTECTED_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + "/")
+    (route) =>
+      route === "/"
+        ? pathname === "/"
+        : pathname === route || pathname.startsWith(route + "/")
   );
 
   // 未登录访问受保护路由
@@ -36,6 +39,7 @@ export function proxy(request: NextRequest) {
 // 配置 proxy 匹配的路由（仅保护需要认证的路由）
 export const config = {
   matcher: [
+    "/",
     "/chat/:path*",
     "/api/chat/:path*",
     "/api/kb/:path*",

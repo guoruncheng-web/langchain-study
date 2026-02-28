@@ -8,6 +8,11 @@ export async function GET() {
     return NextResponse.json({ success: false, error: "未登录" }, { status: 401 });
   }
 
+  // 仅管理员可访问知识库
+  if (payload.role !== 'admin') {
+    return NextResponse.json({ success: false, error: "无权访问" }, { status: 403 });
+  }
+
   const sql = getSQL();
   const documents = await sql`
     SELECT id, filename, file_size, chunk_count, status, created_at
