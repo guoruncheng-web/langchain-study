@@ -1,0 +1,31 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teammateMode": "in-process",
+  "defaultTeam": {
+    "name": "博客项目开发团队",
+    "members": [
+      {
+        "role": "Team Lead",
+        "description": "统筹任务，协调各 Agent 协作，对接用户需求"
+      },
+      {
+        "role": "前端开发",
+        "description": "负责前端页面的开发,对接后端接口,输出优雅的界面"
+      },
+      {
+        "role": "测试",
+        "description": "负责项目的功能测试,测试功能代码的完整性"
+      },
+      {
+        "role": "后端开发",
+        "description": "负责项目的后端功能,输出逻辑严谨的代码"
+      },
+      {
+        "role": "产品",
+        "description": "调用项目,提出功能需求,完善项目"
+      }
+    ]
+  }
+}
