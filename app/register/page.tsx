@@ -55,7 +55,7 @@ export default function RegisterPage() {
     }
   };
 
-  // 密码强度提示
+  // 密码强度
   const getPasswordStrength = () => {
     if (!password) return null;
     let strength = 0;
@@ -64,99 +64,164 @@ export default function RegisterPage() {
     if (/[0-9]/.test(password)) strength++;
     if (/[^a-zA-Z0-9]/.test(password)) strength++;
 
-    if (strength <= 1) return { text: "弱", color: "text-red-500" };
-    if (strength <= 2) return { text: "中", color: "text-yellow-500" };
-    if (strength <= 3) return { text: "强", color: "text-green-500" };
-    return { text: "很强", color: "text-green-600" };
+    if (strength <= 1) return { text: "弱", color: "text-red-400", barColor: "bg-red-400", width: "w-1/4" };
+    if (strength <= 2) return { text: "中", color: "text-amber-400", barColor: "bg-amber-400", width: "w-2/4" };
+    if (strength <= 3) return { text: "强", color: "text-emerald-400", barColor: "bg-emerald-400", width: "w-3/4" };
+    return { text: "很强", color: "text-emerald-500", barColor: "bg-emerald-500", width: "w-full" };
   };
 
   const passwordStrength = getPasswordStrength();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 dark:bg-gray-900">
-      <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-lg dark:bg-gray-800">
-        <h1 className="mb-6 text-center text-2xl font-bold text-gray-900 dark:text-white">
-          注册 AI 客服账号
-        </h1>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8">
+      {/* 背景氛围光 */}
+      <div className="pointer-events-none absolute -left-24 -top-24 h-80 w-80 rounded-full bg-accent/12 blur-[100px]" />
+      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-accent/8 blur-[100px]" />
 
+      {/* 卡片 */}
+      <div className="anim-card relative z-10 w-full max-w-md rounded-2xl border border-edge bg-surface p-8 shadow-xl">
+        {/* 品牌图标 */}
+        <div className="mb-6 flex justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
+            <svg className="h-6 w-6 text-accent" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z" />
+            </svg>
+          </div>
+        </div>
+
+        {/* 标题 */}
+        <h1 className="mb-1 text-center text-2xl font-bold tracking-tight">
+          创建新账户
+        </h1>
+        <p className="mb-8 text-center text-sm text-dim">
+          注册后即可开始使用 AI 客服
+        </p>
+
+        {/* 表单 */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 用户名 */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1.5 block text-sm font-medium text-dim">
               用户名
             </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="3-20位字母、数字或下划线"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              disabled={submitting}
-            />
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <svg className="h-4 w-4 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="3-20位字母、数字或下划线"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                disabled={submitting}
+              />
+            </div>
           </div>
 
+          {/* 邮箱 */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1.5 block text-sm font-medium text-dim">
               邮箱
             </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="请输入邮箱地址"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              disabled={submitting}
-            />
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <svg className="h-4 w-4 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="M22 7l-10 6L2 7" />
+                </svg>
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="请输入邮箱地址"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                disabled={submitting}
+              />
+            </div>
           </div>
 
+          {/* 密码 */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1.5 block text-sm font-medium text-dim">
               密码
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少8位，包含字母和数字"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              disabled={submitting}
-            />
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <svg className="h-4 w-4 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="至少8位，包含字母和数字"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                disabled={submitting}
+              />
+            </div>
+            {/* 密码强度条 */}
             {passwordStrength && (
-              <p className={`mt-1 text-xs ${passwordStrength.color}`}>
-                密码强度：{passwordStrength.text}
-              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-1 flex-1 overflow-hidden rounded-full bg-edge">
+                  <div className={`h-1 rounded-full transition-all duration-300 ${passwordStrength.barColor} ${passwordStrength.width}`} />
+                </div>
+                <span className={`text-xs ${passwordStrength.color}`}>
+                  {passwordStrength.text}
+                </span>
+              </div>
             )}
           </div>
 
+          {/* 确认密码 */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="mb-1.5 block text-sm font-medium text-dim">
               确认密码
             </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="再次输入密码"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400"
-              disabled={submitting}
-            />
+            <div className="relative">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+                <svg className="h-4 w-4 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="再次输入密码"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                disabled={submitting}
+              />
+            </div>
           </div>
 
+          {/* 错误提示 */}
           {error && (
-            <p className="text-sm text-red-500">{error}</p>
+            <div className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-500">
+              {error}
+            </div>
           )}
 
+          {/* 提交按钮 */}
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-blue-500 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-gray-600"
+            className="w-full rounded-xl bg-gradient-to-r from-[#6c5ce7] to-[#4834d4] py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 dark:from-[#7c6ff7] dark:to-[#5a4fd8]"
           >
-            {submitting ? "注册中..." : "注册"}
+            {submitting ? "注册中..." : "注 册"}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
+        {/* 登录链接 */}
+        <p className="mt-6 text-center text-sm text-dim">
           已有账号？{" "}
-          <Link href="/login" className="text-blue-500 hover:underline">
+          <Link href="/login" className="font-medium text-accent hover:underline">
             去登录
           </Link>
         </p>
