@@ -17,12 +17,12 @@ interface ChatSession {
   updatedAt: string;
 }
 
-const suggestions = [
-  "你能帮我做什么？",
-  "帮我写一封工作邮件",
-  "解释一下什么是人工智能",
-  "如何提高工作效率？",
-];
+// const suggestions = [
+//   "你能帮我做什么？",
+//   "帮我写一封工作邮件",
+//   "解释一下什么是人工智能",
+//   "如何提高工作效率？",
+// ];
 
 export default function Chat() {
   const { user, loading, logout } = useAuth();
@@ -180,9 +180,9 @@ export default function Chat() {
     }
   };
 
-  const handleSuggestionClick = (text: string) => {
-    setInput(text);
-  };
+  // const handleSuggestionClick = (text: string) => {
+  //   setInput(text);
+  // };
 
   // 加载中显示
   if (loading) {
@@ -287,12 +287,20 @@ export default function Chat() {
           </div>
           <div className="flex items-center gap-2.5">
             {user.role === 'admin' && (
-              <Link
-                href="/kb"
-                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
-              >
-                知识库
-              </Link>
+              <>
+                <Link
+                  href="/kb"
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
+                >
+                  知识库
+                </Link>
+                <Link
+                  href="/admin"
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
+                >
+                  后台管理
+                </Link>
+              </>
             )}
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
               {user.username?.[0]?.toUpperCase() || "U"}

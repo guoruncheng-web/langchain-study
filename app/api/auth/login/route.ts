@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
   // 根据用户名或邮箱查找用户
   const rows = await sql`
-    SELECT id, username, email, password_hash, role
+    SELECT id, username, email, password_hash, role, COALESCE(status, 'active') AS status
     FROM users
     WHERE username = ${lowerId} OR email = ${lowerId}
     LIMIT 1
@@ -34,6 +34,14 @@ export async function POST(req: Request) {
   }
 
   const user = rows[0];
+
+  // 检查用户是否被禁用
+  if (user.status === "disabled") {
+    return NextResponse.json(
+      { success: false, error: "该账号已被禁用，请联系管理员" },
+      { status: 403 }
+    );
+  }
 
   // 验证密码
   const passwordValid = await bcrypt.compare(password, user.password_hash);
