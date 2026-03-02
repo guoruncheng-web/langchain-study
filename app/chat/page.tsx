@@ -402,7 +402,7 @@ export default function Chat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="发送消息..."
-                className="input-glow w-full rounded-xl border border-edge bg-surface py-3 pl-4 pr-12 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-surface py-3 pl-4 pr-12 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={isLoading}
               />
               <button

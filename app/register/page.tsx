@@ -116,7 +116,7 @@ export default function RegisterPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="3-20位字母、数字或下划线"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>
@@ -139,7 +139,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="请输入邮箱地址"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>
@@ -162,7 +162,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="至少8位，包含字母和数字"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>
@@ -195,7 +195,7 @@ export default function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="再次输入密码"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>

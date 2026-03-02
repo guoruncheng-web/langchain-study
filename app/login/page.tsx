@@ -81,7 +81,7 @@ export default function LoginPage() {
                 value={loginId}
                 onChange={(e) => setLoginId(e.target.value)}
                 placeholder="请输入用户名或邮箱"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="请输入密码"
-                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-sm transition-all placeholder:text-faint disabled:opacity-50"
+                className="input-glow w-full rounded-xl border border-edge bg-background py-2.5 pl-10 pr-4 text-base sm:text-sm transition-all placeholder:text-faint disabled:opacity-50"
                 disabled={submitting}
               />
             </div>
