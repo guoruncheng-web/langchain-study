@@ -5,6 +5,33 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import Link from "next/link";
 
+// 将文本中的链接解析为可点击的 <a> 标签
+function renderContentWithLinks(content: string, isUser: boolean) {
+  const urlRegex = /(https?:\/\/[^\s<>\"')\]]+)/g;
+  const parts = content.split(urlRegex);
+  if (parts.length === 1) return content;
+
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`underline underline-offset-2 break-all ${
+          isUser
+            ? "text-blue-200 hover:text-white"
+            : "text-accent hover:text-accent/80"
+        }`}
+      >
+        {part}
+      </a>
+    ) : (
+      part
+    )
+  );
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -34,6 +61,7 @@ export default function Chat() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quotaModal, setQuotaModal] = useState<{ tokenUsed: number; tokenLimit: number } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 未登录重定向
@@ -130,6 +158,13 @@ export default function Chat() {
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const data = await response.json();
+          setQuotaModal({ tokenUsed: data.tokenUsed, tokenLimit: data.tokenLimit });
+          // 移除刚添加的用户消息
+          setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+          return;
+        }
         throw new Error("请求失败");
       }
 
@@ -203,7 +238,7 @@ export default function Chat() {
   if (!user) return null;
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background scifi-bg scanline">
       {/* 侧边栏遮罩（移动端） */}
       {sidebarOpen && (
         <div
@@ -214,7 +249,7 @@ export default function Chat() {
 
       {/* 侧边栏 */}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-72 border-r border-edge bg-surface transition-transform duration-300 ease-out lg:static lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        className={`fixed inset-y-0 left-0 z-30 w-72 border-r border-edge bg-surface transition-transform duration-300 ease-out lg:static lg:translate-x-0 scifi-sidebar ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
       >
         <div className="flex h-full flex-col">
@@ -232,7 +267,7 @@ export default function Chat() {
           <div className="px-3 pt-3 pb-1">
             <button
               onClick={newChat}
-              className="flex w-full items-center gap-2 rounded-xl border border-edge px-3.5 py-2.5 text-sm font-medium transition-all hover:border-accent hover:bg-accent/5"
+              className="flex w-full items-center gap-2 rounded-xl border border-edge px-3.5 py-2.5 text-sm font-medium transition-all hover:border-accent hover:bg-accent/5 btn-scifi"
             >
               <svg className="h-4 w-4 text-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M12 5v14M5 12h14" />
@@ -271,7 +306,7 @@ export default function Chat() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* 顶部导航栏 */}
         <header
-          className="flex items-center justify-between border-b border-edge px-4 py-2.5"
+          className="flex items-center justify-between border-b border-edge px-4 py-2.5 scifi-header"
           style={{ background: 'var(--header-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
         >
           <div className="flex items-center gap-2.5">
@@ -316,8 +351,8 @@ export default function Chat() {
         </header>
 
         {/* 聊天区域 */}
-        <div className="flex-1 overflow-y-auto chat-scroll">
-          <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
+        <div className="flex-1 overflow-y-auto chat-scroll grid-bg">
+          <div className="relative z-10 mx-auto max-w-3xl space-y-5 px-4 py-6">
             {/* 空状态 */}
             {messages.length === 0 && (
               <div className="flex min-h-[60vh] flex-col items-center justify-center">
@@ -353,20 +388,20 @@ export default function Chat() {
               >
                 {/* AI 头像 */}
                 {message.role === "assistant" && (
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-white">
+                  <div className="avatar-pulse mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-white">
                     ✦
                   </div>
                 )}
 
                 {/* 消息气泡 */}
                 <div
-                  className={`max-w-[75%] rounded-2xl px-4 py-3 ${message.role === "user"
-                    ? "bg-gradient-to-br from-[#6c5ce7] to-[#4834d4] text-white shadow-md dark:from-[#7c6ff7] dark:to-[#5a4fd8]"
-                    : "border border-edge bg-surface shadow-sm"
+                  className={`max-w-[75%] overflow-hidden rounded-2xl px-4 py-3 ${message.role === "user"
+                    ? "bg-gradient-to-br from-[#6c5ce7] to-[#4834d4] text-white shadow-md dark:from-[#7c6ff7] dark:to-[#5a4fd8] scifi-bubble-user"
+                    : "border border-edge bg-surface shadow-sm scifi-bubble-ai"
                     }`}
                 >
-                  <p className="whitespace-pre-wrap text-[0.938rem] leading-relaxed">
-                    {message.content}
+                  <p className="whitespace-pre-wrap break-words text-[0.938rem] leading-relaxed">
+                    {renderContentWithLinks(message.content, message.role === "user")}
                   </p>
                 </div>
 
@@ -382,14 +417,14 @@ export default function Chat() {
             {/* 加载动画 */}
             {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="anim-msg flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-white">
+                <div className="avatar-pulse flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs text-white">
                   ✦
                 </div>
-                <div className="rounded-2xl border border-edge bg-surface px-4 py-3.5 shadow-sm">
+                <div className="rounded-2xl border border-edge bg-surface px-4 py-3.5 shadow-sm scifi-bubble-ai">
                   <div className="flex items-center gap-1.5">
-                    <div className="typing-dot h-1.5 w-1.5 rounded-full bg-dim"></div>
-                    <div className="typing-dot h-1.5 w-1.5 rounded-full bg-dim"></div>
-                    <div className="typing-dot h-1.5 w-1.5 rounded-full bg-dim"></div>
+                    <div className="typing-dot typing-dot-scifi h-1.5 w-1.5 rounded-full"></div>
+                    <div className="typing-dot typing-dot-scifi h-1.5 w-1.5 rounded-full"></div>
+                    <div className="typing-dot typing-dot-scifi h-1.5 w-1.5 rounded-full"></div>
                   </div>
                 </div>
               </div>
@@ -401,7 +436,7 @@ export default function Chat() {
 
         {/* 输入区域 */}
         <div
-          className="border-t border-edge px-4 py-3"
+          className="border-t border-edge px-4 py-3 scifi-input-area"
           style={{ background: 'var(--input-bg)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
         >
           <form onSubmit={handleSubmit} className="mx-auto max-w-3xl">
@@ -427,6 +462,31 @@ export default function Chat() {
           </form>
         </div>
       </div>
+
+      {/* 额度用尽弹窗 */}
+      {quotaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="anim-card mx-4 w-full max-w-sm rounded-2xl border border-edge bg-surface p-6 shadow-xl">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mx-auto">
+              <svg className="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h3 className="mb-2 text-center text-lg font-semibold">今日 Token 用量已达上限</h3>
+            <p className="mb-4 text-center text-sm text-dim">
+              今日已使用 <span className="font-semibold text-accent">{quotaModal.tokenUsed.toLocaleString()}</span> / <span className="font-semibold text-accent">{quotaModal.tokenLimit.toLocaleString()}</span> tokens，明天将自动重置。如需更多额度请联系管理员。
+            </p>
+            <button
+              onClick={() => setQuotaModal(null)}
+              className="w-full rounded-xl bg-accent py-2.5 text-sm font-medium text-white transition-all hover:brightness-110"
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

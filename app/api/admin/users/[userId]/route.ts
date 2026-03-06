@@ -20,11 +20,16 @@ export async function PATCH(
 
   const { userId } = await params;
   const body = await request.json();
-  const { role, status } = body;
+  const { role, status, tokenLimit, resetTokenUsed } = body;
 
   // 至少提供一个修改字段
-  if (role === undefined && status === undefined) {
+  if (role === undefined && status === undefined && tokenLimit === undefined && resetTokenUsed === undefined) {
     return NextResponse.json({ success: false, error: "请提供要修改的字段" }, { status: 400 });
+  }
+
+  // 校验 tokenLimit
+  if (tokenLimit !== undefined && (typeof tokenLimit !== "number" || tokenLimit < 0)) {
+    return NextResponse.json({ success: false, error: "无效的额度值" }, { status: 400 });
   }
 
   // 校验角色值
@@ -51,7 +56,9 @@ export async function PATCH(
 
   // 检查目标用户是否存在
   const existing = await sql`
-    SELECT id, username, role, COALESCE(status, 'active') AS status
+    SELECT id, username, role, COALESCE(status, 'active') AS status,
+      COALESCE(token_limit, 10000) AS token_limit,
+      COALESCE(token_used, 0) AS token_used
     FROM users WHERE id = ${userId}
   `;
   if (existing.length === 0) {
@@ -61,9 +68,13 @@ export async function PATCH(
   // 合并更新字段
   const newRole = role ?? existing[0].role;
   const newStatus = status ?? existing[0].status;
+  const newTokenLimit = tokenLimit ?? existing[0].token_limit;
+  const newTokenUsed = resetTokenUsed ? 0 : existing[0].token_used;
 
   await sql`
-    UPDATE users SET role = ${newRole}, status = ${newStatus}, updated_at = NOW()
+    UPDATE users SET role = ${newRole}, status = ${newStatus},
+      token_limit = ${newTokenLimit}, token_used = ${newTokenUsed},
+      updated_at = NOW()
     WHERE id = ${userId}
   `;
 
@@ -74,6 +85,8 @@ export async function PATCH(
       username: existing[0].username,
       role: newRole,
       status: newStatus,
+      tokenLimit: newTokenLimit,
+      tokenUsed: newTokenUsed,
     },
   });
 }

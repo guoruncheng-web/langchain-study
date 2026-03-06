@@ -15,6 +15,34 @@ export async function POST(req: Request) {
     });
   }
 
+  // 非 admin 用户检查 token 额度（按天重置）
+  if (payload.role !== "admin") {
+    const sql0 = getSQL();
+    // 如果 token_reset_date 不是今天，自动重置用量
+    await sql0`
+      UPDATE users SET token_used = 0, token_reset_date = CURRENT_DATE
+      WHERE id = ${payload.userId} AND (token_reset_date IS NULL OR token_reset_date < CURRENT_DATE)
+    `;
+    const quotaRows = await sql0`
+      SELECT COALESCE(token_limit, 10000) AS token_limit, COALESCE(token_used, 0) AS token_used
+      FROM users WHERE id = ${payload.userId}
+    `;
+    if (quotaRows.length > 0) {
+      const { token_limit, token_used } = quotaRows[0];
+      if (token_used >= token_limit) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "今日 Token 用量已达上限，明天将自动重置",
+            tokenUsed: token_used,
+            tokenLimit: token_limit,
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+  }
+
   const body = await req.json();
   const { sessionId: inputSessionId } = body;
 
@@ -100,6 +128,7 @@ export async function POST(req: Request) {
     modelName: process.env.DASHSCOPE_MODEL || "qwen-plus",
     temperature: 0.7,
     streaming: true,
+    streamUsage: true,
     configuration: {
       baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },
@@ -144,6 +173,8 @@ export async function POST(req: Request) {
 
   // 收集完整的 AI 回复，用于流式结束后保存到数据库
   let fullAiResponse = "";
+  // 记录本次请求消耗的 token 总量
+  let totalTokens = 0;
 
   // 创建一个 ReadableStream 来处理流式响应
   const encoder = new TextEncoder();
@@ -155,6 +186,11 @@ export async function POST(req: Request) {
           : JSON.stringify(chunk.content);
         fullAiResponse += content;
         controller.enqueue(encoder.encode(content));
+
+        // 从流式 chunk 中提取 token 使用量（最后一个 chunk 包含完整统计）
+        if (chunk.usage_metadata) {
+          totalTokens = chunk.usage_metadata.total_tokens || 0;
+        }
       }
       controller.close();
 
@@ -168,6 +204,24 @@ export async function POST(req: Request) {
           `;
         } catch (error) {
           console.error("保存 AI 回复到数据库失败:", error);
+        }
+      }
+
+      // 非 admin 用户：累加实际消耗的 token 数量（拿不到时按字符数估算，中文约 1.5 token/字）
+      if (payload.role !== "admin") {
+        if (totalTokens === 0) {
+          const inputText = langchainMessages.map((m) => typeof m.content === "string" ? m.content : "").join("");
+          totalTokens = Math.ceil((inputText.length + fullAiResponse.length) * 1.5);
+        }
+        if (totalTokens > 0) {
+          try {
+            const usageSql = getSQL();
+            await usageSql`
+              UPDATE users SET token_used = COALESCE(token_used, 0) + ${totalTokens} WHERE id = ${payload.userId}
+            `;
+          } catch (error) {
+            console.error("更新 token 用量失败:", error);
+          }
         }
       }
     },

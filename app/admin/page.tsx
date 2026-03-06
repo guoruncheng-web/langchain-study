@@ -9,6 +9,8 @@ interface AdminUser {
   email: string;
   role: string;
   status: string;
+  tokenLimit: number;
+  tokenUsed: number;
   createdAt: string;
   sessionCount: number;
 }
@@ -144,6 +146,52 @@ export default function AdminUsers() {
       setCreateError("网络错误，请稍后重试");
     } finally {
       setCreating(false);
+    }
+  };
+
+  // 修改用户额度
+  const handleTokenLimitChange = async (userId: string, newLimit: number) => {
+    setChangingId(userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenLimit: newLimit }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadUsers();
+      } else {
+        setError(data.error || "修改额度失败");
+      }
+    } catch {
+      setError("网络错误，请稍后重试");
+    } finally {
+      setChangingId(null);
+    }
+  };
+
+  // 重置用户已用额度
+  const handleResetTokenUsed = async (userId: string) => {
+    setChangingId(userId);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resetTokenUsed: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadUsers();
+      } else {
+        setError(data.error || "重置失败");
+      }
+    } catch {
+      setError("网络错误，请稍后重试");
+    } finally {
+      setChangingId(null);
     }
   };
 
@@ -317,6 +365,7 @@ export default function AdminUsers() {
                     <th className="px-4 py-3 font-medium text-dim">邮箱</th>
                     <th className="px-4 py-3 font-medium text-dim">角色</th>
                     <th className="px-4 py-3 font-medium text-dim">状态</th>
+                    <th className="px-4 py-3 font-medium text-dim">今日额度</th>
                     <th className="px-4 py-3 font-medium text-dim">会话数</th>
                     <th className="px-4 py-3 font-medium text-dim">注册时间</th>
                     <th className="px-4 py-3 font-medium text-dim">操作</th>
@@ -352,6 +401,41 @@ export default function AdminUsers() {
                         >
                           {u.status === "active" ? "正常" : "已禁用"}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.role === "admin" ? (
+                          <span className="text-xs text-faint">无限制</span>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-xs font-medium ${u.tokenUsed >= u.tokenLimit ? "text-red-500" : "text-dim"}`}>
+                              {u.tokenUsed}/{u.tokenLimit}
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              defaultValue={u.tokenLimit}
+                              disabled={changingId === u.id}
+                              onBlur={(e) => {
+                                const val = parseInt(e.target.value);
+                                if (!isNaN(val) && val !== u.tokenLimit) {
+                                  handleTokenLimitChange(u.id, val);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                              }}
+                              className="w-16 rounded border border-edge bg-background px-1.5 py-0.5 text-xs text-center focus:border-accent focus:outline-none"
+                            />
+                            <button
+                              onClick={() => handleResetTokenUsed(u.id)}
+                              disabled={changingId === u.id || u.tokenUsed === 0}
+                              title="重置已用额度"
+                              className="rounded px-1.5 py-0.5 text-xs text-accent hover:bg-accent/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              重置
+                            </button>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-dim">{u.sessionCount}</td>
                       <td className="px-4 py-3 text-dim whitespace-nowrap">

@@ -59,6 +59,11 @@ export async function initTables() {
   // 迁移：为用户表添加状态列（active/disabled）
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'`;
 
+  // 迁移：为用户表添加 token 限额、已用量和重置日期列
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_limit INTEGER DEFAULT 10000`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_used INTEGER DEFAULT 0`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS token_reset_date DATE DEFAULT CURRENT_DATE`;
+
   // 创建索引加速查询
   await sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON chat_sessions(user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_messages_session_id ON messages(session_id)`;

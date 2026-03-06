@@ -15,7 +15,10 @@ export async function GET() {
 
   const sql = getSQL();
   const rows = await sql`
-    SELECT id, username, email, role FROM users WHERE id = ${payload.userId}
+    SELECT id, username, email, role,
+      COALESCE(token_limit, 10000) AS token_limit,
+      CASE WHEN token_reset_date < CURRENT_DATE OR token_reset_date IS NULL THEN 0 ELSE COALESCE(token_used, 0) END AS token_used
+    FROM users WHERE id = ${payload.userId}
   `;
 
   if (rows.length === 0) {
@@ -28,6 +31,13 @@ export async function GET() {
   const user = rows[0];
   return NextResponse.json({
     success: true,
-    user: { id: user.id, username: user.username, email: user.email, role: user.role || 'user' },
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role || 'user',
+      tokenLimit: user.token_limit,
+      tokenUsed: user.token_used,
+    },
   });
 }

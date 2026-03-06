@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
     users = await sql`
       SELECT u.id, u.username, u.email, u.role,
              COALESCE(u.status, 'active') AS status,
+             COALESCE(u.token_limit, 10000) AS token_limit,
+             CASE WHEN u.token_reset_date < CURRENT_DATE OR u.token_reset_date IS NULL THEN 0 ELSE COALESCE(u.token_used, 0) END AS token_used,
              u.created_at,
              COUNT(cs.id)::int AS session_count
       FROM users u
@@ -43,6 +45,8 @@ export async function GET(request: NextRequest) {
     users = await sql`
       SELECT u.id, u.username, u.email, u.role,
              COALESCE(u.status, 'active') AS status,
+             COALESCE(u.token_limit, 10000) AS token_limit,
+             CASE WHEN u.token_reset_date < CURRENT_DATE OR u.token_reset_date IS NULL THEN 0 ELSE COALESCE(u.token_used, 0) END AS token_used,
              u.created_at,
              COUNT(cs.id)::int AS session_count
       FROM users u
@@ -60,6 +64,8 @@ export async function GET(request: NextRequest) {
       email: u.email,
       role: u.role,
       status: u.status,
+      tokenLimit: u.token_limit,
+      tokenUsed: u.token_used,
       createdAt: u.created_at,
       sessionCount: u.session_count,
     })),

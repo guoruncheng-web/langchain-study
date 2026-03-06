@@ -8,6 +8,8 @@ interface User {
   username: string;
   email: string;
   role: string;
+  tokenLimit?: number;
+  tokenUsed?: number;
 }
 
 // 认证上下文类型
