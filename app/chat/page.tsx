@@ -4,6 +4,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../contexts/AuthContext";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/atom-one-dark.css";
 
 // 将文本中的链接解析为可点击的 <a> 标签
 function renderContentWithLinks(content: string, isUser: boolean) {
@@ -12,7 +16,7 @@ function renderContentWithLinks(content: string, isUser: boolean) {
   if (parts.length === 1) return content;
 
   return parts.map((part, i) =>
-    urlRegex.test(part) ? (
+    /^https?:\/\//.test(part) ? (
       <a
         key={i}
         href={part}
@@ -62,7 +66,79 @@ export default function Chat() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [quotaModal, setQuotaModal] = useState<{ tokenUsed: number; tokenLimit: number } | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameTitle, setRenameTitle] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sessionActionLoading, setSessionActionLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // 复制消息内容
+  const handleCopy = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedId(messageId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // 静默失败
+    }
+  };
+
+  // 重命名会话
+  const handleRename = async (sid: string) => {
+    const trimmed = renameTitle.trim();
+    if (!trimmed) {
+      setRenamingId(null);
+      return;
+    }
+    setSessionActionLoading(sid);
+    try {
+      const res = await fetch(`/api/chat/history/${sid}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadSessions();
+      }
+    } catch {
+      // 静默失败
+    }
+    setRenamingId(null);
+    setSessionActionLoading(null);
+  };
+
+  // 删除会话
+  const handleDelete = async (sid: string) => {
+    setSessionActionLoading(sid);
+    try {
+      const res = await fetch(`/api/chat/history/${sid}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (sessionId === sid) {
+          setSessionId(null);
+          setMessages([]);
+        }
+        await loadSessions();
+      }
+    } catch {
+      // 静默失败
+    }
+    setDeleteConfirmId(null);
+    setSessionActionLoading(null);
+  };
+
+  // 开始重命名
+  const startRename = (s: ChatSession) => {
+    setRenamingId(s.id);
+    setRenameTitle(s.title || "");
+    setDeleteConfirmId(null);
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
 
   // 未登录重定向
   useEffect(() => {
@@ -279,19 +355,72 @@ export default function Chat() {
           {/* 会话列表 */}
           <div className="flex-1 overflow-y-auto chat-scroll px-2 py-2">
             {sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => loadSession(s.id)}
-                className={`mb-0.5 flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${sessionId === s.id
-                  ? "bg-accent/10 font-medium text-accent"
-                  : "text-dim hover:bg-elevated hover:text-foreground"
-                  }`}
-              >
-                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-                </svg>
-                <span className="truncate">{s.title || "新对话"}</span>
-              </button>
+              <div key={s.id} className="group/session relative mb-0.5">
+                {sessionActionLoading === s.id ? (
+                  <div className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-dim">
+                    <svg className="h-4 w-4 shrink-0 animate-spin text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" opacity="0.3" />
+                      <path d="M12 2v4" strokeLinecap="round" />
+                    </svg>
+                    <span className="truncate flex-1 opacity-60">{s.title || "新对话"}</span>
+                  </div>
+                ) : renamingId === s.id ? (
+                  <div className="flex items-center gap-1.5 rounded-xl px-3 py-2">
+                    <svg className="h-4 w-4 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <input
+                      ref={renameInputRef}
+                      value={renameTitle}
+                      onChange={(e) => setRenameTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleRename(s.id);
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      onBlur={() => handleRename(s.id)}
+                      className="min-w-0 flex-1 rounded-md border border-accent/50 bg-background px-2 py-0.5 text-sm outline-none focus:border-accent"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => loadSession(s.id)}
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-all ${sessionId === s.id
+                      ? "bg-accent/10 font-medium text-accent"
+                      : "text-dim hover:bg-elevated hover:text-foreground"
+                      }`}
+                  >
+                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    </svg>
+                    <span className="truncate flex-1">{s.title || "新对话"}</span>
+                    {/* 操作按钮 */}
+                    <span className={`flex shrink-0 items-center gap-0.5 transition-opacity group-hover/session:opacity-100 ${sessionId === s.id ? "opacity-100" : "opacity-0"}`}>
+                      <span
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); startRename(s); }}
+                        className="rounded-md p-1 text-faint hover:bg-accent/10 hover:text-accent"
+                        title="重命名"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                      </span>
+                      <span
+                        role="button"
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(s.id); }}
+                        className="rounded-md p-1 text-faint hover:bg-red-500/10 hover:text-red-400"
+                        title="删除"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                        </svg>
+                      </span>
+                    </span>
+                  </button>
+                )}
+              </div>
             ))}
             {sessions.length === 0 && (
               <p className="px-3 py-6 text-center text-xs text-faint">
@@ -394,15 +523,44 @@ export default function Chat() {
                 )}
 
                 {/* 消息气泡 */}
-                <div
-                  className={`max-w-[75%] overflow-hidden rounded-2xl px-4 py-3 ${message.role === "user"
-                    ? "bg-gradient-to-br from-[#6c5ce7] to-[#4834d4] text-white shadow-md dark:from-[#7c6ff7] dark:to-[#5a4fd8] scifi-bubble-user"
-                    : "border border-edge bg-surface shadow-sm scifi-bubble-ai"
-                    }`}
-                >
-                  <p className="whitespace-pre-wrap break-words text-[0.938rem] leading-relaxed">
-                    {renderContentWithLinks(message.content, message.role === "user")}
-                  </p>
+                <div className={`max-w-[75%] ${message.role === "assistant" ? "group/msg" : ""}`}>
+                  <div
+                    className={`overflow-hidden rounded-2xl px-4 py-3 ${message.role === "user"
+                      ? "bg-gradient-to-br from-[#6c5ce7] to-[#4834d4] text-white shadow-md dark:from-[#7c6ff7] dark:to-[#5a4fd8] scifi-bubble-user"
+                      : "border border-edge bg-surface shadow-sm scifi-bubble-ai"
+                      }`}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="markdown-body text-[0.938rem] leading-relaxed">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap break-words text-[0.938rem] leading-relaxed">
+                        {renderContentWithLinks(message.content, true)}
+                      </p>
+                    )}
+                  </div>
+                  {/* 复制按钮 */}
+                  {message.role === "assistant" && message.content && (
+                    <button
+                      onClick={() => handleCopy(message.id, message.content)}
+                      className="copy-btn mt-1.5 flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-faint opacity-0 transition-all hover:bg-elevated hover:text-dim group-hover/msg:opacity-100"
+                    >
+                      {copiedId === message.id ? (
+                        <>
+                          <svg className="h-3.5 w-3.5 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
+                          <span className="text-green-400">已复制</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg>
+                          <span>复制</span>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
 
                 {/* 用户头像 */}
@@ -463,11 +621,52 @@ export default function Chat() {
         </div>
       </div>
 
+      {/* 删除确认弹窗 */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="anim-card scifi-modal mx-4 w-full max-w-xs rounded-2xl border border-accent/30 bg-surface p-6 shadow-xl">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full mx-auto" style={{ background: 'rgba(239,68,68,0.08)', boxShadow: '0 0 20px rgba(239,68,68,0.15), inset 0 0 12px rgba(239,68,68,0.05)' }}>
+              <svg className="h-6 w-6 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </div>
+            <h3 className="mb-2 text-center text-base font-semibold">确认删除会话？</h3>
+            <p className="mb-5 text-center text-sm text-dim">删除后将无法恢复该会话的所有消息记录。</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={!!sessionActionLoading}
+                className="flex-1 rounded-xl border border-edge py-2.5 text-sm font-medium text-dim transition-all hover:border-accent/50 hover:bg-accent/5 disabled:opacity-40"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={!!sessionActionLoading}
+                className="flex-1 rounded-xl py-2.5 text-sm font-medium text-white transition-all hover:brightness-110 disabled:opacity-60"
+                style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', boxShadow: '0 0 15px rgba(239,68,68,0.3)' }}
+              >
+                {sessionActionLoading ? (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" opacity="0.3" />
+                      <path d="M12 2v4" strokeLinecap="round" />
+                    </svg>
+                    删除中...
+                  </span>
+                ) : "删除"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 额度用尽弹窗 */}
       {quotaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="anim-card mx-4 w-full max-w-sm rounded-2xl border border-edge bg-surface p-6 shadow-xl">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mx-auto">
+          <div className="anim-card scifi-modal mx-4 w-full max-w-sm rounded-2xl border border-accent/30 bg-surface p-6 shadow-xl">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full mx-auto" style={{ background: 'rgba(239,68,68,0.08)', boxShadow: '0 0 20px rgba(239,68,68,0.15), inset 0 0 12px rgba(239,68,68,0.05)' }}>
               <svg className="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />

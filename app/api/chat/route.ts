@@ -1,5 +1,5 @@
 import { ChatOpenAI } from "@langchain/openai";
-import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
+import { HumanMessage, AIMessage, SystemMessage, type BaseMessage } from "@langchain/core/messages";
 import { getUserFromRequest } from "@/lib/auth";
 import { getSQL } from "@/lib/db";
 import { getVectorStore } from "@/lib/rag";
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
       // 非 admin 用户：累加实际消耗的 token 数量（拿不到时按字符数估算，中文约 1.5 token/字）
       if (payload.role !== "admin") {
         if (totalTokens === 0) {
-          const inputText = langchainMessages.map((m) => typeof m.content === "string" ? m.content : "").join("");
+          const inputText = langchainMessages.map((m: BaseMessage) => typeof m.content === "string" ? m.content : "").join("");
           totalTokens = Math.ceil((inputText.length + fullAiResponse.length) * 1.5);
         }
         if (totalTokens > 0) {
