@@ -163,7 +163,7 @@ function BarChart({ data, valueKey, color, label }: { data: { date: string; [k: 
 }
 
 export default function AdminStats() {
-  const { user } = useAuth();
+  const { user, authFetch } = useAuth();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +172,7 @@ export default function AdminStats() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/admin/stats");
+      const res = await authFetch("/api/admin/stats");
       const data = await res.json();
       if (data.success) {
         setStats(data.stats);

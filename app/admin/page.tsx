@@ -16,7 +16,7 @@ interface AdminUser {
 }
 
 export default function AdminUsers() {
-  const { user } = useAuth();
+  const { user, authFetch } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [search, setSearch] = useState("");
   const [filteredUsers, setFilteredUsers] = useState<AdminUser[]>([]);
@@ -36,7 +36,7 @@ export default function AdminUsers() {
     try {
       setLoadingData(true);
       setError(null);
-      const res = await fetch("/api/admin/users");
+      const res = await authFetch("/api/admin/users");
       const data = await res.json();
       if (data.success) {
         setUsers(data.users);
@@ -81,7 +81,7 @@ export default function AdminUsers() {
     setChangingId(userId);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await authFetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role: newRole }),
@@ -105,7 +105,7 @@ export default function AdminUsers() {
     setChangingId(userId);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await authFetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -129,7 +129,7 @@ export default function AdminUsers() {
     setCreating(true);
     setCreateError(null);
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await authFetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(createForm),
@@ -154,7 +154,7 @@ export default function AdminUsers() {
     setChangingId(userId);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await authFetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tokenLimit: newLimit }),
@@ -177,7 +177,7 @@ export default function AdminUsers() {
     setChangingId(userId);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
+      const res = await authFetch(`/api/admin/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resetTokenUsed: true }),

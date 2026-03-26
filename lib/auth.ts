@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 // Cookie 名称
 const COOKIE_NAME = "auth-token";
@@ -75,8 +75,19 @@ export function createClearCookieOptions() {
 
 /**
  * 从请求中提取并验证用户信息
+ * 优先读取 Authorization header（支持 iframe 跨域场景），回退到 cookie
  */
 export async function getUserFromRequest(): Promise<JwtPayload | null> {
+  // 优先从 Authorization header 读取（iframe 跨域场景）
+  const headerStore = await headers();
+  const authHeader = headerStore.get("authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.slice(7);
+    const payload = verifyToken(token);
+    if (payload) return payload;
+  }
+
+  // 回退到 cookie（同域场景）
   const cookieStore = await cookies();
   const token = cookieStore.get(COOKIE_NAME)?.value;
 

@@ -46,7 +46,7 @@ function statusLabel(status: string): string {
 }
 
 export default function AdminDocuments() {
-  const { user } = useAuth();
+  const { user, authFetch } = useAuth();
   const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export default function AdminDocuments() {
     try {
       setLoadingData(true);
       setError(null);
-      const res = await fetch("/api/admin/documents");
+      const res = await authFetch("/api/admin/documents");
       const data = await res.json();
       if (data.success) {
         setDocuments(data.documents);

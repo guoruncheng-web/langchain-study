@@ -56,7 +56,7 @@ interface ChatSession {
 // ];
 
 export default function Chat() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, authFetch } = useAuth();
   const router = useRouter();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -96,7 +96,7 @@ export default function Chat() {
     }
     setSessionActionLoading(sid);
     try {
-      const res = await fetch(`/api/chat/history/${sid}`, {
+      const res = await authFetch(`/api/chat/history/${sid}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: trimmed }),
@@ -116,7 +116,7 @@ export default function Chat() {
   const handleDelete = async (sid: string) => {
     setSessionActionLoading(sid);
     try {
-      const res = await fetch(`/api/chat/history/${sid}`, {
+      const res = await authFetch(`/api/chat/history/${sid}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -152,7 +152,7 @@ export default function Chat() {
   // 加载会话列表
   const loadSessions = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat/history");
+      const res = await authFetch("/api/chat/history");
       const data = await res.json();
       if (data.success) {
         setSessions(data.sessions);
@@ -160,7 +160,7 @@ export default function Chat() {
     } catch {
       // 静默失败
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -176,7 +176,7 @@ export default function Chat() {
   // 加载指定会话的消息
   const loadSession = async (sid: string) => {
     try {
-      const res = await fetch(`/api/chat/history/${sid}`);
+      const res = await authFetch(`/api/chat/history/${sid}`);
       const data = await res.json();
       if (data.success) {
         setSessionId(sid);
@@ -273,7 +273,7 @@ export default function Chat() {
         { role: "user" as const, content: buildUserContent() },
       ];
 
-      const response = await fetch("/api/chat", {
+      const response = await authFetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

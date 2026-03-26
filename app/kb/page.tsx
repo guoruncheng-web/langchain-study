@@ -51,7 +51,7 @@ function statusLabel(status: string): string {
 }
 
 export default function KnowledgeBase() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, authFetch } = useAuth();
   const router = useRouter();
 
   const [documents, setDocuments] = useState<KBDocument[]>([]);
@@ -71,7 +71,7 @@ export default function KnowledgeBase() {
   // 加载文档列表
   const loadDocuments = useCallback(async () => {
     try {
-      const res = await fetch("/api/kb");
+      const res = await authFetch("/api/kb");
       const data = await res.json();
       if (data.success) {
         setDocuments(data.documents);
@@ -117,7 +117,7 @@ export default function KnowledgeBase() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/kb/upload", {
+      const res = await authFetch("/api/kb/upload", {
         method: "POST",
         body: formData,
       });
@@ -174,7 +174,7 @@ export default function KnowledgeBase() {
 
     setDeletingId(doc.id);
     try {
-      const res = await fetch(`/api/kb/${doc.id}`, {
+      const res = await authFetch(`/api/kb/${doc.id}`, {
         method: "DELETE",
       });
       const data = await res.json();

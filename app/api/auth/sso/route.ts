@@ -59,12 +59,11 @@ export async function GET(req: NextRequest) {
 
     // 签发客服系统的 JWT
     const authToken = signToken({ userId, username, role });
-    const cookieOptions = createAuthCookieOptions(authToken);
 
-    // 重定向到聊天页
-    const response = NextResponse.redirect(new URL("/chat", req.url));
-    response.cookies.set(cookieOptions);
-    return response;
+    // 重定向到聊天页，通过 URL 传递 token（支持 iframe 跨域场景）
+    const chatUrl = new URL("/chat", req.url);
+    chatUrl.searchParams.set("sso_token", authToken);
+    return NextResponse.redirect(chatUrl);
   } catch {
     return NextResponse.redirect(new URL("/login", req.url));
   }
