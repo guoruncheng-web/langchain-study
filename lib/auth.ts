@@ -51,8 +51,8 @@ export function createAuthCookieOptions(token: string) {
     name: COOKIE_NAME,
     value: token,
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    secure: true,
+    sameSite: "none" as const,
     path: "/",
     maxAge: TOKEN_MAX_AGE,
   };
@@ -66,8 +66,8 @@ export function createClearCookieOptions() {
     name: COOKIE_NAME,
     value: "",
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
+    secure: true,
+    sameSite: "none" as const,
     path: "/",
     maxAge: 0,
   };
