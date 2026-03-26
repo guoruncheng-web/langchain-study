@@ -68,13 +68,6 @@ export default function KnowledgeBase() {
     }
   }, [user, loading, router]);
 
-  // 非管理员重定向到聊天页面
-  useEffect(() => {
-    if (!loading && user && user.role !== 'admin') {
-      router.push("/chat");
-    }
-  }, [user, loading, router]);
-
   // 加载文档列表
   const loadDocuments = useCallback(async () => {
     try {
@@ -107,14 +100,15 @@ export default function KnowledgeBase() {
 
     // 前端校验文件类型
     const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext !== "txt" && ext !== "md") {
-      setUploadError("仅支持 .txt 和 .md 格式的文件");
+    const allowedExts = ["txt", "md", "pdf", "jpg", "jpeg", "png", "webp", "bmp", "gif"];
+    if (!allowedExts.includes(ext || "")) {
+      setUploadError("仅支持 .txt、.md、.pdf 和图片文件（jpg/png/webp）");
       return;
     }
 
     // 前端校验文件大小
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError("文件大小不能超过 2MB");
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError("文件大小不能超过 10MB");
       return;
     }
 
@@ -255,7 +249,7 @@ export default function KnowledgeBase() {
             >
               <input
                 type="file"
-                accept=".txt,.md"
+                accept=".txt,.md,.pdf,.jpg,.jpeg,.png,.webp,.bmp,.gif"
                 onChange={handleFileChange}
                 className="absolute inset-0 cursor-pointer opacity-0"
                 disabled={uploading}
@@ -285,7 +279,7 @@ export default function KnowledgeBase() {
                     <span className="text-blue-500"> 点击选择文件</span>
                   </p>
                   <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-                    支持 .txt、.md 格式，最大 2MB
+                    支持 .txt、.md、.pdf、图片（jpg/png/webp）格式，最大 10MB
                   </p>
                 </>
               )}

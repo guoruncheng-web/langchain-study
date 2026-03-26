@@ -5,6 +5,17 @@ import { getSQL } from "@/lib/db";
 import { getVectorStore } from "@/lib/rag";
 import { v4 as uuidv4 } from "uuid";
 
+interface MessageContent {
+  type: string;
+  text?: string;
+  image_url?: { url: string };
+}
+
+interface ChatMessage {
+  role: string;
+  content: string | MessageContent[];
+}
+
 export async function POST(req: Request) {
   // 认证检查
   const payload = await getUserFromRequest();
@@ -55,12 +66,27 @@ export async function POST(req: Request) {
   }
 
   // 只允许 user 和 assistant 角色，过滤掉 system 消息防止提示词注入
-  const messages = body.messages
+  // 支持多模态消息（文字+图片）
+  const messages: ChatMessage[] = body.messages
     .filter((m: { role: string }) => m.role === "user" || m.role === "assistant")
-    .map((m: { role: string; content: string }) => ({
-      role: m.role,
-      content: typeof m.content === "string" ? m.content.slice(0, 10000) : "",
-    }));
+    .map((m: ChatMessage) => {
+      if (typeof m.content === "string") {
+        return { role: m.role, content: m.content.slice(0, 10000) };
+      }
+      // 多模态消息：保留 text 和 image_url 类型
+      if (Array.isArray(m.content)) {
+        const filtered = m.content
+          .filter((c: MessageContent) => c.type === "text" || c.type === "image_url")
+          .map((c: MessageContent) => {
+            if (c.type === "text") return { type: "text", text: (c.text || "").slice(0, 10000) };
+            if (c.type === "image_url" && c.image_url?.url) return { type: "image_url", image_url: { url: c.image_url.url } };
+            return null;
+          })
+          .filter(Boolean);
+        return { role: m.role, content: filtered as MessageContent[] };
+      }
+      return { role: m.role, content: "" };
+    });
 
   if (messages.length === 0) {
     return new Response(
@@ -107,14 +133,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // 保存用户发送的最后一条消息
-    const lastUserMessage = [...messages].reverse().find(
-      (m: { role: string }) => m.role === "user"
-    );
+    // 保存用户发送的最后一条消息（多模态消息只保存文本部分，标记含图片）
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
     if (lastUserMessage) {
+      const textContent = extractTextContent(lastUserMessage);
+      const hasImg = Array.isArray(lastUserMessage.content) &&
+        lastUserMessage.content.some((c) => c.type === "image_url");
+      const savedContent = hasImg ? `[图片] ${textContent}` : textContent;
       await sql`
         INSERT INTO messages (id, session_id, role, content)
-        VALUES (${uuidv4()}, ${sessionId}, ${"user"}, ${lastUserMessage.content})
+        VALUES (${uuidv4()}, ${sessionId}, ${"user"}, ${savedContent})
       `;
     }
   } catch (error) {
@@ -123,9 +151,16 @@ export async function POST(req: Request) {
     sessionValid = false;
   }
 
-  // 初始化阿里云百炼平台模型
+  // 检测消息中是否包含图片（决定是否使用 VL 模型）
+  const hasImage = messages.some(
+    (m) => Array.isArray(m.content) && m.content.some((c) => c.type === "image_url")
+  );
+
+  // 初始化阿里云百炼平台模型（有图片时自动切换到 VL 模型）
   const model = new ChatOpenAI({
-    modelName: process.env.DASHSCOPE_MODEL || "qwen-plus",
+    modelName: hasImage
+      ? (process.env.DASHSCOPE_VL_MODEL || "qwen-vl-plus")
+      : (process.env.DASHSCOPE_MODEL || "qwen-plus"),
     temperature: 0.7,
     streaming: true,
     streamUsage: true,
@@ -134,12 +169,23 @@ export async function POST(req: Request) {
     },
   });
 
+  // 提取最后一条用户消息的纯文本（用于 RAG 检索和持久化）
+  function extractTextContent(msg: ChatMessage): string {
+    if (typeof msg.content === "string") return msg.content;
+    if (Array.isArray(msg.content)) {
+      return msg.content
+        .filter((c) => c.type === "text")
+        .map((c) => c.text || "")
+        .join(" ");
+    }
+    return "";
+  }
+
   // RAG 检索：基于用户最后一条消息搜索相关知识库文档
   let ragContext = "";
   try {
-    const userQuery = [...messages].reverse().find(
-      (m: { role: string }) => m.role === "user"
-    )?.content;
+    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user");
+    const userQuery = lastUserMsg ? extractTextContent(lastUserMsg) : "";
     if (userQuery) {
       const vectorStore = await getVectorStore();
       const results = await vectorStore.similaritySearch(userQuery, 3);
@@ -151,12 +197,16 @@ export async function POST(req: Request) {
     console.error("RAG 检索失败（不影响聊天）:", error);
   }
 
-  // 将消息转换为 LangChain 消息格式（仅 user/assistant）
-  const langchainMessages = messages.map((msg: { role: string; content: string }) => {
+  // 将消息转换为 LangChain 消息格式（支持多模态）
+  const langchainMessages = messages.map((msg) => {
     if (msg.role === "assistant") {
-      return new AIMessage(msg.content);
+      return new AIMessage(typeof msg.content === "string" ? msg.content : extractTextContent(msg));
     }
-    return new HumanMessage(msg.content);
+    // user 消息：支持文本和图片混合
+    if (Array.isArray(msg.content)) {
+      return new HumanMessage({ content: msg.content as Array<{ type: string; text?: string; image_url?: { url: string } }> });
+    }
+    return new HumanMessage(typeof msg.content === "string" ? msg.content : "");
   });
 
   // 如果有 RAG 检索结果，在消息头部插入系统提示

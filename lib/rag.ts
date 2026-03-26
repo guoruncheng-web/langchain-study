@@ -9,6 +9,7 @@ export function getEmbeddings() {
   return new OpenAIEmbeddings({
     model: "text-embedding-v3",
     dimensions: 1024,
+    batchSize: 10,
     configuration: {
       baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
     },

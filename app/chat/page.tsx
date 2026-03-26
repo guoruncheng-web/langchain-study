@@ -62,6 +62,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingImage, setPendingImage] = useState<{ base64: string; mimeType: string; name: string } | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -73,6 +74,7 @@ export default function Chat() {
   const [sessionActionLoading, setSessionActionLoading] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // 复制消息内容
   const handleCopy = async (messageId: string, content: string) => {
@@ -205,30 +207,77 @@ export default function Chat() {
     router.push("/login");
   };
 
+  // 处理图片选择
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("图片大小不能超过 10MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // data:image/png;base64,xxxx
+      const [prefix, base64] = result.split(",");
+      const mimeType = prefix.match(/data:(.*?);/)?.[1] || "image/png";
+      setPendingImage({ base64, mimeType, name: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
   // 发送消息
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if ((!input.trim() && !pendingImage) || isLoading) return;
+
+    const imageData = pendingImage;
+    const textContent = input.trim();
+
+    // 构建显示用的消息
+    const displayContent = imageData
+      ? (textContent ? `[图片: ${imageData.name}] ${textContent}` : `[图片: ${imageData.name}]`)
+      : textContent;
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: displayContent,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setPendingImage(null);
     setIsLoading(true);
 
+    // 构建发送给 API 的消息内容
+    type ApiContent = { type: string; text?: string; image_url?: { url: string } };
+    const buildUserContent = (): string | ApiContent[] => {
+      if (!imageData) return textContent;
+      const parts: ApiContent[] = [];
+      if (textContent) parts.push({ type: "text", text: textContent });
+      parts.push({
+        type: "image_url",
+        image_url: { url: `data:${imageData.mimeType};base64,${imageData.base64}` },
+      });
+      return parts;
+    };
+
     try {
+      // 历史消息用纯文本，当前消息可能带图片
+      const apiMessages = [
+        ...messages.map((msg) => ({ role: msg.role, content: msg.content })),
+        { role: "user" as const, content: buildUserContent() },
+      ];
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, userMessage].map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          })),
+          messages: apiMessages,
           sessionId,
         }),
       });
@@ -450,21 +499,19 @@ export default function Chat() {
             <h1 className="text-base font-semibold tracking-tight">AI 客服</h1>
           </div>
           <div className="flex items-center gap-2.5">
+            <Link
+              href="/kb"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
+            >
+              知识库
+            </Link>
             {user.role === 'admin' && (
-              <>
-                <Link
-                  href="/kb"
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
-                >
-                  知识库
-                </Link>
-                <Link
-                  href="/admin"
-                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
-                >
-                  后台管理
-                </Link>
-              </>
+              <Link
+                href="/admin"
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-dim transition-colors hover:bg-accent/5 hover:text-accent"
+              >
+                后台管理
+              </Link>
             )}
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
               {user.username?.[0]?.toUpperCase() || "U"}

@@ -40,22 +40,29 @@ app/
 │   └── page.tsx                      # 注册页面
 ├── chat/
 │   └── page.tsx                      # 聊天页面（含侧边栏、会话管理）
+├── kb/
+│   └── page.tsx                      # 知识库管理页面
 └── api/
     ├── auth/
     │   ├── register/route.ts         # POST 用户注册
     │   ├── login/route.ts            # POST 用户登录
     │   ├── logout/route.ts           # POST 用户登出
     │   └── me/route.ts               # GET 当前用户信息
-    └── chat/
-        ├── route.ts                  # POST 聊天（流式响应+消息持久化）
-        └── history/
-            ├── route.ts              # GET 聊天会话列表
-            └── [sessionId]/route.ts  # GET 指定会话消息
+    ├── chat/
+    │   ├── route.ts                  # POST 聊天（流式响应+消息持久化+RAG 检索）
+    │   └── history/
+    │       ├── route.ts              # GET 聊天会话列表
+    │       └── [sessionId]/route.ts  # GET 指定会话消息
+    └── kb/
+        ├── route.ts                  # GET 知识库文档列表
+        ├── upload/route.ts           # POST 文档上传+向量化
+        └── [documentId]/route.ts     # DELETE 删除文档
 
 lib/
 ├── db.ts                             # Neon PostgreSQL 数据库连接与表初始化
 ├── auth.ts                           # JWT 工具（签发、验证、Cookie 管理）
-└── validations.ts                    # 输入校验（用户名、邮箱、密码）
+├── validations.ts                    # 输入校验（用户名、邮箱、密码）
+└── rag.ts                            # 向量存储工具（嵌入模型、NeonPostgres、文本分块器）
 
 middleware.ts                         # 路由权限控制
 docs/
