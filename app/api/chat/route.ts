@@ -198,7 +198,7 @@ export async function POST(req: Request) {
   }
 
   // 将消息转换为 LangChain 消息格式（支持多模态）
-  const langchainMessages = messages.map((msg) => {
+  const langchainMessages: BaseMessage[] = messages.map((msg) => {
     if (msg.role === "assistant") {
       return new AIMessage(typeof msg.content === "string" ? msg.content : extractTextContent(msg));
     }
